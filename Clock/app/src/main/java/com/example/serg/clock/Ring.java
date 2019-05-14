@@ -1,11 +1,14 @@
 package com.example.serg.clock;
 
 import android.app.ActivityManager;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -19,47 +22,89 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
 public class Ring extends AppCompatActivity {
     int time_per;
+    String APP_PREFERENCES_ALL_APPS = "allApps";
+    TextView textView;
+    ArrayList<String> allApps;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ring);
-        final ArrayList<String> allApps = getAllApps();
         Button perenos = findViewById(R.id.Perenos);
         Button switch_of = findViewById(R.id.Switch_off);
-//        final MediaPlayer mediaPlayer = MediaPlayer.create(Ring.this, R.raw.mymusic);
-//        mediaPlayer.start();
-          Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-          Ringtone ringtone = RingtoneManager.getRingtone(this, notification);
+        final TextView textView = findViewById(R.id.textView);
+
+        SharedPreferences mSettings;
+        mSettings = getSharedPreferences("settings", Context.MODE_PRIVATE);
+        final SharedPreferences.Editor editor = mSettings.edit();
+        time_per = mSettings.getInt(MainActivity.APP_PREFERENCES_TIME_PERENOS,5);
+
+        if(mSettings.contains(APP_PREFERENCES_ALL_APPS)){//доработай идею что инфа о заблокированных приложенияй храниться в памяти телефона
+            allApps = null;
+            for (String a : mSettings.getString(APP_PREFERENCES_ALL_APPS,"").split(" ")){
+                allApps.add(a);
+            }
+
+        }else{
+            allApps = getAllApps();
+            //allApps.remove(getForegroundApp());//надо бы удалить сам будильник из приложений
+        }
+
+        Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+          final Ringtone ringtone = RingtoneManager.getRingtone(this, notification);
           ringtone.play();
-        switch_of.setOnClickListener(new View.OnClickListener() {
+
+          switch_of.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                android.os.Process.killProcess(android.os.Process.myUid());
+                //android.os.Process.killProcess(android.os.Process.myUid());
+                ringtone.stop();
+                textView.setText("Destroy");
+                onStop();
+                onDestroy();
+
             }
         });
         perenos.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String App = allApps.remove(0);
-                new Block(App).start();
+                String App = allApps.remove(/*new Random().nextInt(allApps.size() - 1)*/ 0);
+                textView.setText(App + " " + getForegroundApp());
 
+                String aa = "";
+                for (String i:allApps) {
+                    aa+=i + " ";
+                }
+                editor.putString(APP_PREFERENCES_ALL_APPS,aa);
+                new Block(App).start();
+                //showHomeScreen();
+                final Intent my_intent = new Intent(getApplicationContext(), Ring.AlarmReceiver.class);
+                PendingIntent pendingIntent = PendingIntent.getBroadcast(Ring.this,0,my_intent,
+                        PendingIntent.FLAG_CANCEL_CURRENT);
+                AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+                alarmManager.set(AlarmManager.RTC_WAKEUP,System.currentTimeMillis() + time_per * 60 * 1000,pendingIntent);
                 onStop();
-                //mediaPlayer.stop();
+                //ringtone.stop();
+ /*
                 try {
-                    wait(time_per*60*1000);
+                    Thread.sleep(time_per*60*1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
-                }
-                onStart();
+                }*/
+                //setContentView(R.layout.activity_ring);
+               // ringtone.play();
+                //onStart();
+                onDestroy();//довь в анроид манифест     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />s
             }
         });
     }
@@ -68,6 +113,9 @@ public class Ring extends AppCompatActivity {
     }
     protected void onStart(){
         super.onStart();
+    }
+    protected void onDestroy(){
+        super.onDestroy();
     }
 
     public class AlarmReceiver extends BroadcastReceiver {
@@ -105,7 +153,7 @@ public class Ring extends AppCompatActivity {
         startActivity(startHomescreen);
     }
 
-    public String getForegroundApp() {
+    public String getForegroundApp1() {
         String currentApp = "NULL";
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
             UsageStatsManager usm = (UsageStatsManager) this.getSystemService(Context.USAGE_STATS_SERVICE);
@@ -125,6 +173,13 @@ public class Ring extends AppCompatActivity {
 
         return currentApp;
     }
+    public String getForegroundApp(){
+        ActivityManager mActivityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningTaskInfo> RunningTask = mActivityManager.getRunningTasks(1);
+        ActivityManager.RunningTaskInfo ar = RunningTask.get(0);
+        String activityOnTop=ar.topActivity.getPackageName();
+        return activityOnTop;
+    }
 
     public class Block extends Thread {
         String App;
@@ -135,11 +190,25 @@ public class Ring extends AppCompatActivity {
             int i = 0;
             while(i <= 10){//!!!!!!!!!!!!!!!!!1
                 if(App == getForegroundApp()){
+                    textView = findViewById(R.id.textView);
+                    textView.setText("Block");
                     showHomeScreen();
+
                 }
                 //Thread.sleep(1000);
                 i++;
             }
+            SharedPreferences mSettings;
+            mSettings = getSharedPreferences("settings", Context.MODE_PRIVATE);
+            final SharedPreferences.Editor editor = mSettings.edit();
+
+            String aa = "";
+            for (String r:allApps) {
+                aa+=i + " ";//!!!!!!!!!!!!!!!!!!!!!!!!!!!!1последний пробел это плохо
+            }
+            aa+=App;
+            editor.putString(APP_PREFERENCES_ALL_APPS,aa);
+
         }
     }
 

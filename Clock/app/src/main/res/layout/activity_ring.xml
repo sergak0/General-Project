@@ -11,7 +11,7 @@
         android:layout_width="169dp"
         android:layout_height="0dp"
         android:layout_marginTop="237dp"
-        android:layout_marginBottom="104dp"
+        android:layout_marginBottom="37dp"
         android:text="Switch Of"
         app:layout_constraintBottom_toTopOf="@+id/Perenos"
         app:layout_constraintEnd_toEndOf="parent"
@@ -22,10 +22,22 @@
         android:id="@+id/Perenos"
         android:layout_width="191dp"
         android:layout_height="0dp"
-        android:layout_marginBottom="235dp"
+        android:layout_marginBottom="52dp"
         android:text="Perenesti"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/textView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/Switch_off" />
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="293dp"
+        android:layout_height="0dp"
+        android:layout_marginEnd="49dp"
+        android:layout_marginRight="49dp"
+        android:layout_marginBottom="144dp"
+        android:text="TextView"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/Perenos" />
 </android.support.constraint.ConstraintLayout>
